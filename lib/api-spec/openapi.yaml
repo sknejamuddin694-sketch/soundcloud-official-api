@@ -1,0 +1,178 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: soundcloud
+    description: Rights-aware SoundCloud download-link operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /soundcloud/resolve:
+    post:
+      operationId: resolveSoundCloudTrack
+      tags: [soundcloud]
+      summary: Check whether a SoundCloud track is officially downloadable
+      description: Resolves a public SoundCloud track using the configured official API credential. It never downloads, converts, or bypasses access controls.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SoundCloudResolveRequest"
+      responses:
+        "200":
+          description: Track metadata and official download eligibility
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoundCloudResolveResponse"
+        "400":
+          description: Invalid or non-SoundCloud URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Track is not officially downloadable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: SoundCloud credential is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /soundcloud/download-link:
+    get:
+      operationId: getSoundCloudDownloadLink
+      tags: [soundcloud]
+      summary: Return the official download URL for an eligible track
+      description: Returns a direct official SoundCloud download URL only when SoundCloud marks the track as downloadable.
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Public SoundCloud track URL
+      responses:
+        "200":
+          description: Official download link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SoundCloudDownloadResponse"
+        "400":
+          description: Invalid or non-SoundCloud URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Track is not officially downloadable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: SoundCloud credential is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    SoundCloudResolveRequest:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Public SoundCloud track URL
+      required:
+        - url
+      additionalProperties: false
+    SoundCloudTrack:
+      type: object
+      properties:
+        id:
+          type: [integer, "null"]
+        urn:
+          type: [string, "null"]
+        title:
+          type: [string, "null"]
+        permalinkUrl:
+          type: [string, "null"]
+          format: uri
+        userName:
+          type: [string, "null"]
+        downloadable:
+          type: boolean
+      required:
+        - id
+        - urn
+        - title
+        - permalinkUrl
+        - userName
+        - downloadable
+    SoundCloudResolveResponse:
+      type: object
+      properties:
+        track:
+          $ref: "#/components/schemas/SoundCloudTrack"
+        downloadable:
+          type: boolean
+      required:
+        - track
+        - downloadable
+    SoundCloudDownloadResponse:
+      type: object
+      properties:
+        track:
+          $ref: "#/components/schemas/SoundCloudTrack"
+        downloadUrl:
+          type: string
+          format: uri
+      required:
+        - track
+        - downloadUrl
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message
+
